@@ -1,6 +1,6 @@
 import logging
 import os
-import pytz
+import pytz  # Импортируем pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -12,50 +12,43 @@ from telegram.ext import (
 )
 import yt_dlp
 from dotenv import load_dotenv
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# Завантаження .env файлу
+# Инициализация
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 if TOKEN is None:
-    print("Помилка: переменная BOT_TOKEN не загружена!")
+    print("Ошибка: переменная BOT_TOKEN не загружена!")
 else:
-    print(f"Токен загружен: {TOKEN[:10]}...")  # Печатаємо тільки перші 10 символів токена для безпеки
+    print(f"Токен загружен: {TOKEN[:10]}...")  # Печатаем только первые 10 символов токена для безопасности
 if not TOKEN:
-    raise ValueError("❌ BOT_TOKEN не найден! Створіть файл .env з переменною BOT_TOKEN=ваш_токен")
+    raise ValueError("❌ BOT_TOKEN не найден! Создайте файл .env с переменной BOT_TOKEN=ваш_токен")
 
-# Налаштування логування
+# Настройка логирования
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# Встановлення часової зони
-timezone = pytz.timezone("UTC")
-
-# Стартова команда
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробник команди /start"""
+    """Обработчик команды /start"""
     keyboard = [[InlineKeyboardButton("🚀 Старт", callback_data='start')]]
     await update.message.reply_text(
-        "👋 Привіт! Я можу скачувати відео з YouTube. Натисни 'Старт', щоб почати.",
+        "👋 Привет! Я могу скачивать видео с YouTube. Нажми 'Старт' чтобы начать.",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# Обробка кнопок
 async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробник кнопок"""
+    """Обработчик кнопок"""
     query = update.callback_query
     await query.answer()
     
     if query.data == 'start':
-        await query.edit_message_text("✅ Надішліть мені посилання на відео YouTube")
+        await query.edit_message_text("✅ Отправьте мне ссылку на YouTube видео")
         context.user_data['state'] = 'awaiting_link'
 
-# Обробка посилань
 async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробник посилань"""
+    """Обработчик ссылок"""
     if not context.user_data.get('state') == 'awaiting_link':
         return
     
@@ -63,29 +56,28 @@ async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['link'] = link
     
     keyboard = [
-        [InlineKeyboardButton("🎬 Відео", callback_data='video'),
-         InlineKeyboardButton("🎵 Аудіо", callback_data='audio')],
-        [InlineKeyboardButton("❌ Скасувати", callback_data='cancel')]
+        [InlineKeyboardButton("🎬 Видео", callback_data='video'),
+         InlineKeyboardButton("🎵 Аудио", callback_data='audio')],
+        [InlineKeyboardButton("❌ Отмена", callback_data='cancel')]
     ]
     
     await update.message.reply_text(
-        f"🔗 Посилання отримано: {link}\nОберіть формат:",
+        f"🔗 Ссылка получена: {link}\nВыберите формат:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# Завантаження медіа
 async def download_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Завантаження медіа"""
+    """Скачивание медиа"""
     query = update.callback_query
     await query.answer()
     
     if query.data == 'cancel':
-        await query.edit_message_text("❌ Операцію скасовано")
+        await query.edit_message_text("❌ Операция отменена")
         return
     
     link = context.user_data.get('link')
     if not link:
-        await query.edit_message_text("⚠️ Посилання не знайдено")
+        await query.edit_message_text("⚠️ Ссылка не найдена")
         return
     
     try:
@@ -95,7 +87,7 @@ async def download_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'quiet': True
         }
         
-        await query.edit_message_text("⏳ Завантажую..." + (" відео" if query.data == 'video' else " аудіо"))
+        await query.edit_message_text("⏳ Скачиваю..." + (" видео" if query.data == 'video' else " аудио"))
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(link, download=True)
@@ -105,15 +97,19 @@ async def download_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.remove(filename)
         
     except Exception as e:
-        logger.error(f"Помилка скачування: {e}")
-        await query.message.reply_text(f"❌ Помилка: {str(e)}")
+        logger.error(f"Ошибка скачивания: {e}")
+        await query.message.reply_text(f"❌ Ошибка: {str(e)}")
 
-# Основна функція запуску бота
 def main():
     """Запуск бота"""
     application = Application.builder().token(TOKEN).build()
     
-    # Реєстрація обробників
+    # Устанавливаем временную зону с помощью pytz
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    scheduler = AsyncIOScheduler(timezone=pytz.UTC)
+    scheduler.start()
+    
+    # Регистрация обработчиков
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(handle_button, pattern='^start$'))
     application.add_handler(CallbackQueryHandler(download_media, pattern='^(video|audio|cancel)$'))
