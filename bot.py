@@ -1,6 +1,5 @@
 import logging
 import os
-import pytz  # Импортируем pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -104,9 +103,9 @@ def main():
     """Запуск бота"""
     application = Application.builder().token(TOKEN).build()
     
-    # Устанавливаем временную зону с помощью pytz
+    # Убираем использование pytz
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
-    scheduler = AsyncIOScheduler(timezone=pytz.UTC)
+    scheduler = AsyncIOScheduler(timezone=None)
     scheduler.start()
     
     # Регистрация обработчиков
