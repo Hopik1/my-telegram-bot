@@ -1,0 +1,20 @@
+# Файлы Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
+# Файлы окружения
+.env
+.venv
+env/
+venv/
+
+# Файлы бота
+*.mp3
+*.mp4
+*.temp
+
+# Системные файлы
+.DS_Store
+Thumbs.db
